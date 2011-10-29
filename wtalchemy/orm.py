@@ -6,8 +6,8 @@ import sqlalchemy
 from wtforms import fields as f
 from wtforms import validators
 from wtforms.form import Form
-from wtforms.ext.sqlalchemy.fields import QuerySelectField
-from wtforms.ext.sqlalchemy.fields import QuerySelectMultipleField
+from wtalchemy.fields import QuerySelectField
+from wtalchemy.fields import QuerySelectMultipleField
 
 
 __all__ = (
@@ -218,13 +218,13 @@ def model_fields(model, only=None, exclude=None, field_args=None,
     return field_dict
 
 
-def model_form(model, base_class=Form, only=None, exclude=[],
+def model_form(model, base_class=Form, only=None, exclude=None,
     field_args=None, converter=None, exclude_pk=True, exclude_fk=True,
     type_name=None):
     """
     Create a wtforms Form for a given SQLAlchemy model class::
 
-        from wtforms.ext.sqlalchemy.orm import model_form
+        from wtalchemy.orm import model_form
         from myapp.models import User
         UserForm = model_form(User)
 
@@ -251,6 +251,8 @@ def model_form(model, base_class=Form, only=None, exclude=[],
     :param type_name:
         An optional string to set returned type name.
     """
+    if not exclude:
+        exclude = []
     model_mapper = model.__mapper__
     for prop in model_mapper.iterate_properties:
         if isinstance(prop, sqlalchemy.orm.properties.ColumnProperty) and \

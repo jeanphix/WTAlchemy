@@ -8,9 +8,9 @@ from sqlalchemy.ext.declarative import declarative_base
 
 from unittest import TestCase
 
-from wtforms.ext.sqlalchemy.fields import QuerySelectField
-from wtforms.ext.sqlalchemy.fields import QuerySelectMultipleField
-from wtforms.ext.sqlalchemy.orm import model_form
+from wtalchemy.fields import QuerySelectField
+from wtalchemy.fields import QuerySelectMultipleField
+from wtalchemy.orm import model_form
 from wtforms.form import Form
 from wtforms.validators import Optional, Required
 
@@ -181,87 +181,81 @@ class QuerySelectMultipleFieldTest(TestBase):
         self.assert_(form.validate())
 
 
-Model = declarative_base()
-
-
-student_course = Table(
-    'student_course', Model.metadata,
-    Column('student_id', Integer, ForeignKey('student.id')),
-    Column('course_id', Integer, ForeignKey('course.id'))
-)
-
-
-class Course(Model):
-    __tablename__ = "course"
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False)
-
-
-class School(Model):
-    __tablename__ = "school"
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255), nullable=False)
-
-
-class Student(Model):
-    __tablename__ = "student"
-    id = Column(Integer, primary_key=True)
-    full_name = Column(String(255), nullable=False)
-    dob = Column(Date(), nullable=True)
-    current_school_id = Column(Integer, ForeignKey(School.id), nullable=False)
-
-    current_school = relationship(School, backref=backref('students'))
-    courses = relationship("Course", secondary=student_course,
-        backref=backref("students", lazy='dynamic'))
-
-
-pkStudentForm = model_form(Student, exclude_pk=False,
-    type_name='pkStudentForm')
-fkStudentForm = model_form(Student, exclude_fk=False,
-    type_name='fkStudentForm')
-StudentForm = model_form(Student)
-SchoolForm = model_form(School)
-
-
 class ModelFormTest(TestCase):
+    def setUp(self):
+        Model = declarative_base()
+
+        student_course = Table(
+            'student_course', Model.metadata,
+            Column('student_id', Integer, ForeignKey('student.id')),
+            Column('course_id', Integer, ForeignKey('course.id'))
+        )
+
+        class Course(Model):
+            __tablename__ = "course"
+            id = Column(Integer, primary_key=True)
+            name = Column(String(255), nullable=False)
+
+        class School(Model):
+            __tablename__ = "school"
+            id = Column(Integer, primary_key=True)
+            name = Column(String(255), nullable=False)
+
+        class Student(Model):
+            __tablename__ = "student"
+            id = Column(Integer, primary_key=True)
+            full_name = Column(String(255), nullable=False)
+            dob = Column(Date(), nullable=True)
+            current_school_id = Column(Integer, ForeignKey(School.id),
+                nullable=False)
+
+            current_school = relationship(School, backref=backref('students'))
+            courses = relationship("Course", secondary=student_course,
+                backref=backref("students", lazy='dynamic'))
+
+        self.School = School
+        self.Student = Student
+
     def test_nullable_field(self):
-        student_form = StudentForm()
+        student_form = model_form(self.Student)()
         self.assertTrue(issubclass(Optional,
             student_form._fields['dob'].validators[0].__class__))
 
     def test_required_field(self):
-        student_form = StudentForm()
+        student_form = model_form(self.Student)()
         self.assertTrue(issubclass(Required,
             student_form._fields['full_name'].validators[0].__class__))
 
     def test_include_pk(self):
-        student_form = pkStudentForm()
+        form_class = model_form(self.Student, exclude_pk=False)
+        student_form = form_class()
         self.assertIn('id', student_form._fields)
 
     def test_exclude_pk(self):
-        student_form = StudentForm()
+        form_class = model_form(self.Student, exclude_pk=True)
+        student_form = form_class()
         self.assertNotIn('id', student_form._fields)
 
     def test_exclude_fk(self):
-        student_form = StudentForm()
+        student_form = model_form(self.Student)()
         self.assertNotIn('current_school_id', student_form._fields)
 
     def test_include_fk(self):
-        student_form = fkStudentForm()
-        self.assertNotIn('current_school_id', student_form._fields)
+        student_form = model_form(self.Student, exclude_fk=False)()
+        self.assertIn('current_school_id', student_form._fields)
 
     def test_convert_many_to_one(self):
-        student_form = StudentForm()
+        student_form = model_form(self.Student)()
         self.assertTrue(issubclass(QuerySelectField,
             student_form._fields['current_school'].__class__))
 
     def test_convert_one_to_many(self):
-        school_form = SchoolForm()
+        school_form = model_form(self.School)()
         self.assertTrue(issubclass(QuerySelectMultipleField,
             school_form._fields['students'].__class__))
 
     def test_convert_many_to_many(self):
-        student_form = StudentForm()
+        student_form = model_form(self.Student)()
         self.assertTrue(issubclass(QuerySelectMultipleField,
             student_form._fields['courses'].__class__))
 
