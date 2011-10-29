@@ -14,7 +14,6 @@ except ImportError:
     has_identity_key = False
 
 
-
 __all__ = (
     'QuerySelectField', 'QuerySelectMultipleField',
 )
@@ -60,7 +59,8 @@ class QuerySelectField(SelectFieldBase):
 
         if get_pk is None:
             if not has_identity_key:
-                raise Exception('The sqlalchemy identity_key function could not be imported.')
+                raise Exception('The sqlalchemy identity_key function could '
+                    + 'not be imported.')
             self.get_pk = get_pk_from_identity
         else:
             self.get_pk = get_pk
@@ -95,7 +95,8 @@ class QuerySelectField(SelectFieldBase):
         if self._object_list is None:
             query = self.query or self.query_factory()
             get_pk = self.get_pk
-            self._object_list = list((unicode(get_pk(obj)), obj) for obj in query)
+            self._object_list = list((unicode(get_pk(obj)), obj)
+                for obj in query)
         return self._object_list
 
     def iter_choices(self):
@@ -136,7 +137,8 @@ class QuerySelectMultipleField(QuerySelectField):
     def __init__(self, label=None, validators=None, default=None, **kwargs):
         if default is None:
             default = []
-        super(QuerySelectMultipleField, self).__init__(label, validators, default=default, **kwargs)
+        super(QuerySelectMultipleField, self).__init__(label, validators,
+            default=default, **kwargs)
         self._invalid_formdata = False
 
     def _get_data(self):

@@ -44,7 +44,8 @@ class ModelConverterBase(object):
             return
         elif isinstance(prop, sqlalchemy.orm.properties.ColumnProperty) and\
             len(prop.columns) != 1:
-            raise TypeError('Do not know how to convert multiple-column properties currently')
+            raise TypeError('Do not know how to convert multiple-column '
+                + 'properties currently')
 
         kwargs = {
             'validators': [],
@@ -83,7 +84,8 @@ class ModelConverterBase(object):
                 types = [type(column.type)]
 
             for col_type in types:
-                type_string = '%s.%s' % (col_type.__module__, col_type.__name__)
+                type_string = '%s.%s' % (col_type.__module__,
+                    col_type.__name__)
                 if type_string.startswith('sqlalchemy'):
                     type_string = type_string[11:]
 
@@ -116,7 +118,8 @@ class ModelConverterBase(object):
         if field_args:
             kwargs.update(field_args)
 
-        return converter(model=model, mapper=mapper, prop=prop, column=column, field_args=kwargs)
+        return converter(model=model, mapper=mapper, prop=prop, column=column,
+            field_args=kwargs)
 
 
 class ModelConverter(ModelConverterBase):
@@ -126,7 +129,8 @@ class ModelConverter(ModelConverterBase):
     @classmethod
     def _string_common(cls, column, field_args, **extra):
         if column.type.length:
-            field_args['validators'].append(validators.Length(max=column.type.length))
+            field_args['validators'].append(
+                validators.Length(max=column.type.length))
 
     @converts('String', 'Unicode')
     def conv_String(self, field_args, **extra):
@@ -166,7 +170,8 @@ class ModelConverter(ModelConverterBase):
 
     @converts('databases.mysql.MSYear')
     def conv_MSYear(self, field_args, **extra):
-        field_args['validators'].append(validators.NumberRange(min=1901, max=2155))
+        field_args['validators'].append(
+            validators.NumberRange(min=1901, max=2155))
         return f.TextField(**field_args)
 
     @converts('databases.postgres.PGInet', 'dialects.postgresql.base.INET')
@@ -184,7 +189,8 @@ class ModelConverter(ModelConverterBase):
         return QuerySelectField(**field_args)
 
 
-def model_fields(model, only=None, exclude=None, field_args=None, converter=None):
+def model_fields(model, only=None, exclude=None, field_args=None,
+    converter=None):
     """
     Generate a dictionary of fields for a given SQLAlchemy model.
 
@@ -251,8 +257,8 @@ def model_form(model, base_class=Form, only=None, exclude=[],
                prop.columns[0].primary_key:
             if exclude_pk:
                 exclude.append(prop.key)
-        if isinstance(prop, sqlalchemy.orm.properties.RelationshipProperty) and \
-            exclude_fk and prop.direction.name != 'MANYTOMANY':
+        if isinstance(prop, sqlalchemy.orm.properties.RelationshipProperty) \
+            and  exclude_fk and prop.direction.name != 'MANYTOMANY':
                 for pair in prop.local_remote_pairs:
                     exclude.append(pair[0].key)
     type_name = type_name or model.__name__ + 'Form'
