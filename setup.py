@@ -24,6 +24,7 @@ setup(
     platforms='any',
     install_requires=[
         'WTForms==0.6.3',
+        'SQLALchemy'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
