@@ -3,16 +3,19 @@
 from sqlalchemy import create_engine, ForeignKey
 from sqlalchemy.schema import MetaData, Table, Column
 from sqlalchemy.types import String, Integer, Date
-from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm import sessionmaker, relationship, backref, mapper
 from sqlalchemy.ext.declarative import declarative_base
 
 from unittest import TestCase
 
+from wtforms.form import Form
+from wtforms.validators import Optional, Required, Length
+from wtforms.fields import TextField
+
 from wtalchemy.fields import QuerySelectField
 from wtalchemy.fields import QuerySelectMultipleField
 from wtalchemy.orm import model_form
-from wtforms.form import Form
-from wtforms.validators import Optional, Required
+from wtalchemy.validators import Unique
 
 
 class LazySelect(object):
@@ -70,7 +73,6 @@ class QuerySelectFieldTest(TestBase):
     def setUp(self):
         engine = create_engine('sqlite:///:memory:', echo=False)
         self.Session = sessionmaker(bind=engine)
-        from sqlalchemy.orm import mapper
         self._do_tables(mapper, engine)
 
     def test_without_factory(self):
@@ -132,7 +134,6 @@ class QuerySelectFieldTest(TestBase):
 
 class QuerySelectMultipleFieldTest(TestBase):
     def setUp(self):
-        from sqlalchemy.orm import mapper
         engine = create_engine('sqlite:///:memory:', echo=False)
         Session = sessionmaker(bind=engine)
         self._do_tables(mapper, engine)
@@ -258,6 +259,45 @@ class ModelFormTest(TestCase):
         student_form = model_form(self.Student)()
         self.assertTrue(issubclass(QuerySelectMultipleField,
             student_form._fields['courses'].__class__))
+
+
+class UniqueValidatorTest(TestCase):
+    def setUp(self):
+        Model = declarative_base()
+
+        class User(Model):
+            __tablename__ = "user"
+            id = Column(Integer, primary_key=True)
+            username = Column(String(255), nullable=False, unique=True)
+
+        engine = create_engine('sqlite:///:memory:', echo=False)
+        Session = sessionmaker(bind=engine)
+        self.metadata = Model.metadata
+        self.metadata.create_all(bind=engine)
+        self.sess = Session()
+
+        self.sess.add(User(username='batman'))
+        self.sess.commit()
+
+        class UserForm(Form):
+            username = TextField('Username', [
+                Length(min=4, max=25),
+                Unique(lambda: self.sess, User.username)
+            ])
+
+        self.UserForm = UserForm
+
+    def test_validate(self):
+        from werkzeug.datastructures import MultiDict
+        user_form = self.UserForm(formdata=MultiDict([('username',
+            'spiderman')]))
+        self.assertTrue(user_form.validate())
+
+    def test_wrong(self):
+        from werkzeug.datastructures import MultiDict
+        user_form = self.UserForm(formdata=MultiDict([('username',
+            'batman')]))
+        self.assertFalse(user_form.validate())
 
 
 if __name__ == '__main__':
