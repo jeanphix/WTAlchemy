@@ -7,17 +7,19 @@ class Unique(object):
     """
     field_flags = ('unique', )
 
-    def __init__(self, get_db_session, field, message=None):
-        self.get_db_session = get_db_session
-        self.field = field
+    def __init__(self, get_session, model, column, message=None):
+        self.get_session = get_session
+        self.model = model
+        self.column = column
         self.message = message
 
     def __call__(self, form, field):
         try:
-            self.get_db_session().query(self.field)\
-                .filter(self.field == field.data).one()
-            if self.message is None:
-                self.message = field.gettext(u'Allready exists.')
-            raise ValidationError(self.message)
+            obj = self.get_session().query(self.model)\
+                .filter(self.column == field.data).one()
+            if not hasattr(form, '_obj') or not form._obj == obj:
+                if self.message is None:
+                    self.message = field.gettext(u'Allready exists.')
+                raise ValidationError(self.message)
         except NoResultFound:
             pass

@@ -8,6 +8,7 @@ from wtforms import validators
 from wtforms.form import Form
 from wtalchemy.fields import QuerySelectField
 from wtalchemy.fields import QuerySelectMultipleField
+from wtalchemy.validators import Unique
 
 
 __all__ = (
@@ -37,7 +38,7 @@ class ModelConverterBase(object):
 
         self.converters = converters
 
-    def convert(self, model, mapper, prop, field_args):
+    def convert(self, model, db_session, mapper, prop, field_args):
         if not isinstance(prop, sqlalchemy.orm.properties.ColumnProperty) and \
                 not isinstance(prop,
                 sqlalchemy.orm.properties.RelationshipProperty):
@@ -78,6 +79,10 @@ class ModelConverterBase(object):
             else:
                 kwargs['validators'].append(validators.Required())
 
+            if column.unique:
+                kwargs['validators'].append(Unique(lambda: db_session, model,
+                    column))
+
             if self.use_mro:
                 types = inspect.getmro(type(column.type))
             else:
@@ -110,7 +115,7 @@ class ModelConverterBase(object):
 
             kwargs.update({
                 'allow_blank': nullable,
-                'query_factory': lambda: foreign_model.query.all()
+                'query_factory': lambda: db_session.query(foreign_model).all()
             })
 
             converter = self.converters[prop.direction.name]
@@ -189,7 +194,7 @@ class ModelConverter(ModelConverterBase):
         return QuerySelectField(**field_args)
 
 
-def model_fields(model, only=None, exclude=None, field_args=None,
+def model_fields(model, db_session, only=None, exclude=None, field_args=None,
     converter=None):
     """
     Generate a dictionary of fields for a given SQLAlchemy model.
@@ -211,14 +216,15 @@ def model_fields(model, only=None, exclude=None, field_args=None,
 
     field_dict = {}
     for name, prop in properties:
-        field = converter.convert(model, mapper, prop, field_args.get(name))
+        field = converter.convert(model, db_session, mapper, prop,
+            field_args.get(name))
         if field is not None:
             field_dict[name] = field
 
     return field_dict
 
 
-def model_form(model, base_class=Form, only=None, exclude=None,
+def model_form(model, db_session, base_class=Form, only=None, exclude=None,
     field_args=None, converter=None, exclude_pk=True, exclude_fk=True,
     type_name=None):
     """
@@ -230,6 +236,8 @@ def model_form(model, base_class=Form, only=None, exclude=None,
 
     :param model:
         A SQLAlchemy mapped model class.
+    :param db_session:
+        A SQLAlchemy Session.
     :param base_class:
         Base form class to extend from. Must be a ``wtforms.Form`` subclass.
     :param only:
@@ -251,6 +259,13 @@ def model_form(model, base_class=Form, only=None, exclude=None,
     :param type_name:
         An optional string to set returned type name.
     """
+    class ModelForm(base_class):
+        """Sets object as form attribute."""
+        def __init__(self, *args, **kwargs):
+            if 'obj' in kwargs:
+                self._obj = kwargs['obj']
+            super(ModelForm, self).__init__(*args, **kwargs)
+
     if not exclude:
         exclude = []
     model_mapper = model.__mapper__
@@ -264,5 +279,6 @@ def model_form(model, base_class=Form, only=None, exclude=None,
                 for pair in prop.local_remote_pairs:
                     exclude.append(pair[0].key)
     type_name = type_name or model.__name__ + 'Form'
-    field_dict = model_fields(model, only, exclude, field_args, converter)
-    return type(type_name, (base_class, ), field_dict)
+    field_dict = model_fields(model, db_session, only, exclude, field_args,
+        converter)
+    return type(type_name, (ModelForm, ), field_dict)

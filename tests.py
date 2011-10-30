@@ -205,7 +205,7 @@ class ModelFormTest(TestCase):
         class Student(Model):
             __tablename__ = "student"
             id = Column(Integer, primary_key=True)
-            full_name = Column(String(255), nullable=False)
+            full_name = Column(String(255), nullable=False, unique=True)
             dob = Column(Date(), nullable=True)
             current_school_id = Column(Integer, ForeignKey(School.id),
                 nullable=False)
@@ -217,46 +217,57 @@ class ModelFormTest(TestCase):
         self.School = School
         self.Student = Student
 
+        engine = create_engine('sqlite:///:memory:', echo=False)
+        Session = sessionmaker(bind=engine)
+        self.metadata = Model.metadata
+        self.metadata.create_all(bind=engine)
+        self.sess = Session()
+
     def test_nullable_field(self):
-        student_form = model_form(self.Student)()
+        student_form = model_form(self.Student, self.sess)()
         self.assertTrue(issubclass(Optional,
             student_form._fields['dob'].validators[0].__class__))
 
     def test_required_field(self):
-        student_form = model_form(self.Student)()
+        student_form = model_form(self.Student, self.sess)()
         self.assertTrue(issubclass(Required,
             student_form._fields['full_name'].validators[0].__class__))
 
+    def test_unique_field(self):
+        student_form = model_form(self.Student, self.sess)()
+        self.assertTrue(issubclass(Unique,
+            student_form._fields['full_name'].validators[1].__class__))
+
     def test_include_pk(self):
-        form_class = model_form(self.Student, exclude_pk=False)
+        form_class = model_form(self.Student, self.sess, exclude_pk=False)
         student_form = form_class()
         self.assertIn('id', student_form._fields)
 
     def test_exclude_pk(self):
-        form_class = model_form(self.Student, exclude_pk=True)
+        form_class = model_form(self.Student, self.sess, exclude_pk=True)
         student_form = form_class()
         self.assertNotIn('id', student_form._fields)
 
     def test_exclude_fk(self):
-        student_form = model_form(self.Student)()
+        student_form = model_form(self.Student, self.sess)()
         self.assertNotIn('current_school_id', student_form._fields)
 
     def test_include_fk(self):
-        student_form = model_form(self.Student, exclude_fk=False)()
+        student_form = model_form(self.Student, self.sess, exclude_fk=False)()
         self.assertIn('current_school_id', student_form._fields)
 
     def test_convert_many_to_one(self):
-        student_form = model_form(self.Student)()
+        student_form = model_form(self.Student, self.sess)()
         self.assertTrue(issubclass(QuerySelectField,
             student_form._fields['current_school'].__class__))
 
     def test_convert_one_to_many(self):
-        school_form = model_form(self.School)()
+        school_form = model_form(self.School, self.sess)()
         self.assertTrue(issubclass(QuerySelectMultipleField,
             school_form._fields['students'].__class__))
 
     def test_convert_many_to_many(self):
-        student_form = model_form(self.Student)()
+        student_form = model_form(self.Student, self.sess)()
         self.assertTrue(issubclass(QuerySelectMultipleField,
             student_form._fields['courses'].__class__))
 
@@ -282,7 +293,7 @@ class UniqueValidatorTest(TestCase):
         class UserForm(Form):
             username = TextField('Username', [
                 Length(min=4, max=25),
-                Unique(lambda: self.sess, User.username)
+                Unique(lambda: self.sess, User, User.username)
             ])
 
         self.UserForm = UserForm
