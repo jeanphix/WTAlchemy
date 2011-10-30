@@ -3,7 +3,7 @@ WTAlchemy
 
 Provides a SQLAlchemy extension for WTForms.
 
-Deals with relationship, unicity and more.
+Deals with relationship, unicity and more.::
 
     from wtalchemy.orm import model_form
 
