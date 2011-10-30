@@ -10,14 +10,13 @@ from setuptools import setup, find_packages
 
 setup(
     name='WTAlchemy',
-    version='0.1b',
+    version='0.1b2',
     url='https://github.com/jean-philippe/WTAlchemy',
     license='mit',
     author='Jean-Philippe Serafin',
     author_email='serafinjp@gmail.com',
     description='WTForms SQAlchemy extension',
     long_description=__doc__,
-    data_files=[('', ['README.rst'])],
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
