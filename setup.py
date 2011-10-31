@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='WTAlchemy',
-    version='0.1b2',
+    version='0.1b3',
     url='https://github.com/jean-philippe/WTAlchemy',
     license='mit',
     author='Jean-Philippe Serafin',
