@@ -147,6 +147,11 @@ class ModelConverter(ModelConverterBase):
         self._string_common(field_args=field_args, **extra)
         return f.TextAreaField(**field_args)
 
+    @converts('Enum')
+    def conv_Enum(self, field_args, **extra):
+        choices=[ (enum, enum) for enum in extra['column'].type.enums ]
+        return f.SelectField(choices=choices, **field_args)
+
     @converts('Boolean')
     def conv_Boolean(self, field_args, **extra):
         return f.BooleanField(**field_args)
