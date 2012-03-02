@@ -128,9 +128,6 @@ class ModelConverterBase(object):
 
 
 class ModelConverter(ModelConverterBase):
-    def __init__(self, extra_converters=None):
-        super(ModelConverter, self).__init__(extra_converters)
-
     @classmethod
     def _string_common(cls, column, field_args, **extra):
         if column.type.length:
