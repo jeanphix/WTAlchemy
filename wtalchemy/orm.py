@@ -128,9 +128,6 @@ class ModelConverterBase(object):
 
 
 class ModelConverter(ModelConverterBase):
-    def __init__(self, extra_converters=None):
-        super(ModelConverter, self).__init__(extra_converters)
-
     @classmethod
     def _string_common(cls, column, field_args, **extra):
         if column.type.length:
@@ -146,6 +143,11 @@ class ModelConverter(ModelConverterBase):
     def conv_Text(self, field_args, **extra):
         self._string_common(field_args=field_args, **extra)
         return f.TextAreaField(**field_args)
+
+    @converts('Enum')
+    def conv_Enum(self, field_args, **extra):
+        choices=[ (enum, enum) for enum in extra['column'].type.enums ]
+        return f.SelectField(choices=choices, **field_args)
 
     @converts('Boolean')
     def conv_Boolean(self, field_args, **extra):
